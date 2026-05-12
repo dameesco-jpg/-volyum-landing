@@ -300,6 +300,49 @@
                 font-size: 0.6rem;
             }
         }
+
+        /* Mobile Video Play Button */
+        .video-play-button {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            width: 80px;
+            height: 80px;
+            background: rgba(123, 44, 191, 0.9);
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(123, 44, 191, 0.6);
+        }
+
+        .video-play-button::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 25px solid white;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            margin-left: 5px;
+        }
+
+        .video-play-button:hover {
+            background: rgba(123, 44, 191, 1);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .video-play-button.show {
+            display: flex;
+        }
+
+        .video-play-button.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -308,6 +351,9 @@
         <source src="disco-ball.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
+
+    <!-- Mobile Play Button -->
+    <div class="video-play-button" id="playButton"></div>
 
     <!-- Overlays -->
     <div class="video-overlay"></div>
@@ -335,10 +381,25 @@
 
     <script>
         // Ensure video plays on load
+        const video = document.querySelector('.video-background');
+        const playButton = document.getElementById('playButton');
+
+        // Try to autoplay
         document.addEventListener('DOMContentLoaded', function() {
-            const video = document.querySelector('.video-background');
             video.play().catch(err => {
-                console.log('Video autoplay failed:', err);
+                // If autoplay fails (mobile), show play button
+                console.log('Autoplay prevented, showing play button');
+                playButton.classList.add('show');
+            });
+        });
+
+        // Handle play button click
+        playButton.addEventListener('click', function() {
+            video.play().then(() => {
+                playButton.classList.add('hide');
+                setTimeout(() => {
+                    playButton.classList.remove('show');
+                }, 300);
             });
         });
 

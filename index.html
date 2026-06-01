@@ -20,9 +20,23 @@
             background: #000;
             color: #fff;
             height: 100vh;
+            height: 100dvh;
         }
 
-        /* Video Background */
+        /* Still-frame fallback shown when video can't autoplay (e.g. iOS Low Power Mode) */
+        .poster-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000 url('disco-ball-poster.jpg') center center / cover no-repeat;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Video Background — hidden until playback actually starts so iOS
+           never renders its native play button over a paused video */
         .video-background {
             position: fixed;
             top: 0;
@@ -32,6 +46,7 @@
             object-fit: cover;
             z-index: 1;
             pointer-events: none;
+            visibility: hidden;
         }
 
         /* Hide native mobile (iOS) play button / media controls overlay */
@@ -63,6 +78,7 @@
             position: relative;
             z-index: 10;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -258,8 +274,11 @@
     </style>
 </head>
 <body>
+    <!-- Still-frame fallback background -->
+    <div class="poster-background"></div>
+
     <!-- Video Background -->
-    <video class="video-background" autoplay muted playsinline>
+    <video class="video-background" autoplay muted playsinline preload="auto" poster="disco-ball-poster.jpg">
         <source src="disco-ball.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
@@ -295,18 +314,34 @@
         // Slow down playback so the disco-ball changes feel calmer
         video.playbackRate = 0.5;
 
-        // Try to autoplay (muted + playsinline allows this on mobile)
-        document.addEventListener('DOMContentLoaded', function() {
-            video.play().catch(() => {});
-        });
+        // Attempt autoplay. If it's blocked (e.g. iOS Low Power Mode), hide the
+        // video entirely so iOS can't render its native play button — the
+        // still-frame poster-background div shows through instead.
+        function attemptPlay() {
+            const p = video.play();
+            if (p !== undefined) {
+                p.then(() => {
+                    video.style.visibility = 'visible';
+                }).catch(() => {
+                    video.style.visibility = 'hidden';
+                });
+            }
+        }
 
-        // Fallback: if autoplay was blocked, start on the first user interaction
-        ['touchstart', 'click'].forEach(evt => {
-            document.addEventListener(evt, function startVideo() {
-                if (video.paused) video.play().catch(() => {});
-                document.removeEventListener(evt, startVideo);
-            }, { once: true });
-        });
+        document.addEventListener('DOMContentLoaded', attemptPlay);
+
+        // Fallback: if autoplay stays blocked, keep retrying on each user
+        // interaction until playback actually starts (then stop listening).
+        function retryPlay() {
+            if (video.paused) {
+                attemptPlay();
+            } else {
+                document.removeEventListener('touchstart', retryPlay);
+                document.removeEventListener('click', retryPlay);
+            }
+        }
+        document.addEventListener('touchstart', retryPlay);
+        document.addEventListener('click', retryPlay);
 
         // Keep the video on its last frame instead of restarting
         video.addEventListener('ended', function() {

@@ -34,6 +34,18 @@
             transform: translate(-50%, -50%);
             z-index: 1;
             object-fit: cover;
+            pointer-events: none;
+        }
+
+        /* Hide native mobile (iOS) play button / media controls overlay */
+        .video-background::-webkit-media-controls,
+        .video-background::-webkit-media-controls-start-playback-button,
+        .video-background::-webkit-media-controls-overlay-play-button,
+        .video-background::-webkit-media-controls-play-button,
+        .video-background::-webkit-media-controls-panel {
+            display: none !important;
+            -webkit-appearance: none;
+            opacity: 0;
         }
 
         /* Dark overlay for better text visibility */
@@ -287,6 +299,14 @@
         // Try to autoplay (muted + playsinline allows this on mobile)
         document.addEventListener('DOMContentLoaded', function() {
             video.play().catch(() => {});
+        });
+
+        // Fallback: if autoplay was blocked, start on the first user interaction
+        ['touchstart', 'click'].forEach(evt => {
+            document.addEventListener(evt, function startVideo() {
+                if (video.paused) video.play().catch(() => {});
+                document.removeEventListener(evt, startVideo);
+            }, { once: true });
         });
 
         // Keep the video on its last frame instead of restarting
